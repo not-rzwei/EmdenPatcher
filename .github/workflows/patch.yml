@@ -25,6 +25,9 @@ jobs:
           log-accepted-android-sdk-licenses: false
           cmdline-tools-version: "10406996"
 
+      - name: Add Android Build Tools Path
+        run: echo "$ANDROID_HOME/build-tools/33.0.0" >> $GITHUB_PATH
+
       - name: Download apkeep
         uses: robinraju/release-downloader@v1.10
         with:
@@ -47,17 +50,13 @@ jobs:
 
       - name: Download APK
         run: |
-          mkdir download && cd download
           apkeep -a $PACKAGE_NAME .
-          unzip -q $PACKAGE_NAME.xapk -d $PACKAGE_NAME
+          unzip -q $PACKAGE_NAME.xapk $PACKAGE_NAME.apk
 
       - name: Patch APK
         run: |
-          mkdir patch && cd patch
-          mv ../download/$PACKAGE_NAME/$PACKAGE_NAME.apk .
-          java -jar $GITHUB_WORKSPACE/apktool.jar -q d $PACKAGE_NAME.apk
-
-          cp -r $GITHUB_WORKSPACE/libs/* $PACKAGE_NAME/lib
+          java -jar apktool.jar -q d $PACKAGE_NAME.apk
+          cp -r libs/* $PACKAGE_NAME/lib
 
           PATCH_FILE_NAME="$PACKAGE_NAME/smali_classes2/com/unity3d/player/UnityPlayerActivity.smali"
 
@@ -74,21 +73,20 @@ jobs:
           sed -i "/\.method protected onCreate/i$INJECT_FUNC_TEXT" $PATCH_FILE_NAME
           sed -i "/^\.method protected onCreate/,/^\.end method/s#const/4 v0, 0x1#$INJECT_EXEC_TEXT\n&#" $PATCH_FILE_NAME
 
-          java -jar $GITHUB_WORKSPACE/apktool.jar -q -f b $PACKAGE_NAME -o $PACKAGE_NAME.patched.apk
-          $ANDROID_HOME/build-tools/33.0.0/zipalign -pf 4 $PACKAGE_NAME.patched.apk $PACKAGE_NAME.aligned.apk
+          java -jar apktool.jar -q -f b $PACKAGE_NAME -o $PACKAGE_NAME.patched.apk
 
       - name: Sign APK
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          cd patch
           echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
-          $ANDROID_HOME/build-tools/33.0.0/apksigner sign --ks keystore.jks --ks-pass env:KEYSTORE_PASSWORD  $PACKAGE_NAME.aligned.apk
+          zipalign -pf 4 $PACKAGE_NAME.patched.apk $PACKAGE_NAME.aligned.apk
+          apksigner sign --ks keystore.jks --ks-pass env:KEYSTORE_PASSWORD  $PACKAGE_NAME.aligned.apk
           mv $PACKAGE_NAME.aligned.apk artifact.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: artifact.apk
-          path: patch/artifact.apk
+          path: artifact.apk
