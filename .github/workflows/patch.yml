@@ -48,7 +48,15 @@ jobs:
           mv apkeep-x86_64-unknown-linux-gnu /usr/local/bin/apkeep
           chmod +x /usr/local/bin/apkeep
 
+      - name: Cache APK
+        id: cache-apk
+        uses: actions/cache@v3
+        with:
+          key: apk
+          path: ${{ secrets.PACKAGE_NAME }}.apk
+
       - name: Download APK
+        if: ${{ steps.cache-apk.outputs.cache-hit != 'true' }}
         run: |
           apkeep -a $PACKAGE_NAME .
           unzip -q $PACKAGE_NAME.xapk $PACKAGE_NAME.apk
