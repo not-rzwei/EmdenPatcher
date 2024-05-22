@@ -1,7 +1,6 @@
 name: Patch
 
 on:
-  push:
   workflow_dispatch:
 
 env:
