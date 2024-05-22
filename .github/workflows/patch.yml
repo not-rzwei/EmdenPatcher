@@ -33,27 +33,24 @@ jobs:
           tag: v2.9.3
           fileName: apktool_2.9.3.jar
 
-      - name: Download libEmden
-        uses: robinraju/release-downloader@v1.10
-        with:
-          repository: not-rzwei/libEmden
-          latest: true
-          fileName: libEmden.tar.gz
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Setup tools
         run: |
           mv apktool_2.9.3.jar apktool.jar
           mv apkeep-x86_64-unknown-linux-gnu apkeep
           chmod +x apkeep
-          tar -xzf libEmden.tar.gz
-          ls
 
-      - name: Download APK
+      - name: Patch APK
         env:
           PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
         run: |
+          echo Download APK
           ./apkeep -a $PACKAGE_NAME .
           unzip -q $PACKAGE_NAME.xapk -d $PACKAGE_NAME
+
+          echo Decompile APK
           java -jar apktool.jar -q -f d $PACKAGE_NAME
-          ls
+
+          echo Embed libEmden
+          cp -r libs/. $PACKAGE_NAME/lib/
+
+          ls $PACKAGE_NAME/lib
