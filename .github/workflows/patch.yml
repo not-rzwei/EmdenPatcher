@@ -39,6 +39,7 @@ jobs:
           mv apkeep-x86_64-unknown-linux-gnu apkeep
           chmod +x apkeep
 
-      - name: Check APK
+      - name: Download APK
         run: |
-          ./apkeep -l -a com.YoStarJP.AzurLane .
+          ./apkeep -a com.YoStarJP.AzurLane .
+          ls -lah
