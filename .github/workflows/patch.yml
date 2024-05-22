@@ -40,6 +40,8 @@ jobs:
           chmod +x apkeep
 
       - name: Download APK
+        env:
+          PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
         run: |
-          ./apkeep -a com.YoStarJP.AzurLane .
+          ./apkeep -a $PACKAGE_NAME .
           ls -lah
