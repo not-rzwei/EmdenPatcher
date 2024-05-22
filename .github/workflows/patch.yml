@@ -51,7 +51,7 @@ jobs:
       - name: Set APK version
         id: apk-version
         run: |
-          VERSIONS=($(apkeep -l -a ${{ matrix.package }}))
+          VERSIONS=($(apkeep -l -a ${{ matrix.package }} .))
           echo "VERSION=$(echo ${VERSIONS[-1]})" >> "$GITHUB_OUTPUT"
 
       - name: Cache APK
