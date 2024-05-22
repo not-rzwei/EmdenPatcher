@@ -1,7 +1,11 @@
 name: Patch
 
 on:
+  push:
   workflow_dispatch:
+
+env:
+  PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
 
 jobs:
   patch:
@@ -18,6 +22,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          log-accepted-android-sdk-licenses: false
+          cmdline-tools-version: "10406996"
 
       - name: Download apkeep
         uses: robinraju/release-downloader@v1.10
@@ -36,21 +43,53 @@ jobs:
       - name: Setup tools
         run: |
           mv apktool_2.9.3.jar apktool.jar
-          mv apkeep-x86_64-unknown-linux-gnu apkeep
-          chmod +x apkeep
+          mv apkeep-x86_64-unknown-linux-gnu /usr/local/bin/apkeep
+          chmod +x /usr/local/bin/apkeep
 
-      - name: Patch APK
-        env:
-          PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
+      - name: Download APK
         run: |
-          echo Download APK
-          ./apkeep -a $PACKAGE_NAME .
+          mkdir download && cd download
+          apkeep -a $PACKAGE_NAME .
           unzip -q $PACKAGE_NAME.xapk -d $PACKAGE_NAME
 
-          echo Decompile APK
-          java -jar apktool.jar -q -f d $PACKAGE_NAME
+      - name: Patch APK
+        run: |
+          mkdir patch && cd patch
+          mv ../download/$PACKAGE_NAME/$PACKAGE_NAME.apk .
+          java -jar $GITHUB_WORKSPACE/apktool.jar -q d $PACKAGE_NAME.apk
 
-          echo Embed libEmden
-          cp -r libs/. $PACKAGE_NAME/lib/
+          cp -r $GITHUB_WORKSPACE/libs/* $PACKAGE_NAME/lib
 
-          ls $PACKAGE_NAME/lib
+          PATCH_FILE_NAME="$PACKAGE_NAME/smali_classes2/com/unity3d/player/UnityPlayerActivity.smali"
+
+          INJECT_FUNC_TEXT='\
+          .method private static native init(Landroid/content/Context;)V \
+          .end method \
+          '
+
+          INJECT_EXEC_TEXT='\
+          const-string v0, "Emden" \
+          invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V \
+          invoke-static {p0}, Lcom/unity3d/player/UnityPlayerActivity;->init(Landroid/content/Context;)V \
+          '
+          sed -i "/\.method protected onCreate/i$INJECT_FUNC_TEXT" $PATCH_FILE_NAME
+          sed -i "/^\.method protected onCreate/,/^\.end method/s#const/4 v0, 0x1#$INJECT_EXEC_TEXT\n&#" $PATCH_FILE_NAME
+
+          java -jar $GITHUB_WORKSPACE/apktool.jar -q -f b $PACKAGE_NAME -o $PACKAGE_NAME.patched.apk
+          $ANDROID_HOME/build-tools/33.0.0/zipalign -pf 4 $PACKAGE_NAME.patched.apk $PACKAGE_NAME.aligned.apk
+
+      - name: Sign APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          cd patch
+          echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+          $ANDROID_HOME/build-tools/33.0.0/apksigner sign --ks keystore.jks --ks-pass env:KEYSTORE_PASSWORD  $PACKAGE_NAME.aligned.apk
+          mv $PACKAGE_NAME.aligned.apk artifact.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact.apk
+          path: patch/artifact.apk
