@@ -68,7 +68,7 @@ jobs:
           PACKAGE_NAME: ${{ matrix.package }}
         run: |
           apkeep -a $PACKAGE_NAME .
-          unzip -q $PACKAGE_NAME.xapk $PACKAGE_NAME.apk
+          unzip -q $PACKAGE_NAME.xapk
 
       - name: Patch APK
         env:
@@ -108,8 +108,5 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}.${{ steps.apk-version.outputs.VERSION }}
-          path: |
-            ${{ matrix.package }}.${{ steps.apk-version.outputs.VERSION }}.patched.apk
-            ${{ matrix.package }}.apk/Android
-
+          name: ${{ matrix.package }}-${{ steps.apk-version.outputs.VERSION }}
+          path: ${{ matrix.package }}.patched.apk
