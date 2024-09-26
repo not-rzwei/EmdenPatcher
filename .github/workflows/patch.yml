@@ -108,5 +108,8 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-${{ steps.apk-version.outputs.VERSION }}
-          path: ${{ matrix.package }}.patched.apk
+          name: ${{ matrix.package }}.${{ steps.apk-version.outputs.VERSION }}
+          path: |
+            ${{ matrix.package }}.${{ steps.apk-version.outputs.VERSION }}.patched.apk
+            ${{ matrix.package }}.apk/Android
+
