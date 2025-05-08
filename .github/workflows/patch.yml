@@ -100,6 +100,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
+          find $ANDROID_HOME/build-tools/33.0.0
           echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
           zipalign -pf 4 $PACKAGE_NAME.patched.apk $PACKAGE_NAME.aligned.apk
           apksigner sign --ks keystore.jks --ks-pass env:KEYSTORE_PASSWORD  $PACKAGE_NAME.aligned.apk
