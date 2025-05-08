@@ -9,7 +9,6 @@ jobs:
     strategy:
       matrix:
         package: [com.YoStarJP.AzurLane]
-        # package: [com.YoStarJP.AzurLane, com.YoStarEN.AzurLane]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,8 +25,10 @@ jobs:
           log-accepted-android-sdk-licenses: false
           cmdline-tools-version: "10406996"
 
-      - name: Add Android Build Tools Path
-        run: echo "$ANDROID_HOME/build-tools/33.0.0" >> $GITHUB_PATH
+      - name: Setup Android build-tools
+        run: |
+          sdkmanager "build-tools;34.0.0"
+          echo "$ANDROID_HOME/build-tools/34.0.0" >> "$GITHUB_PATH"
 
       - name: Download apkeep
         uses: robinraju/release-downloader@v1.10
@@ -62,7 +63,7 @@ jobs:
           key: ${{ matrix.package }}-${{ steps.apk-version.outputs.VERSION }}
           path: ${{ matrix.package }}.apk
 
-      - name: Download APK
+      - name: Download APK and Extract OBB
         if: ${{ steps.cache-apk.outputs.cache-hit != 'true' }}
         env:
           PACKAGE_NAME: ${{ matrix.package }}
@@ -105,8 +106,10 @@ jobs:
           apksigner sign --ks keystore.jks --ks-pass env:KEYSTORE_PASSWORD  $PACKAGE_NAME.aligned.apk
           mv $PACKAGE_NAME.aligned.apk $PACKAGE_NAME.patched.apk
 
-      - name: Upload APK artifact
+      - name: Upload APK and OBB
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.package }}-${{ steps.apk-version.outputs.VERSION }}
-          path: ${{ matrix.package }}.patched.apk
+          path: |
+            ${{ matrix.package }}.patched.apk
+            obb/
