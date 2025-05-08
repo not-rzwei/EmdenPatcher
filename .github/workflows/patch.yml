@@ -68,7 +68,6 @@ jobs:
         run: |
           apkeep -a $PACKAGE_NAME .
           unzip -q $PACKAGE_NAME.xapk
-          mv base.apk $PACKAGE_NAME.apk
           mkdir -p obb && find . -iname '*.obb' -exec mv {} obb/ \;
 
       - name: Patch APK
