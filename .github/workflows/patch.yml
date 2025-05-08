@@ -25,8 +25,10 @@ jobs:
           log-accepted-android-sdk-licenses: false
           cmdline-tools-version: "10406996"
 
-      - name: Add Android Build Tools Path
-        run: echo "$ANDROID_HOME/build-tools/33.0.0" >> $GITHUB_PATH
+      - name: Setup Android build-tools
+        run: |
+          sdkmanager "build-tools;34.0.0"
+          echo "$ANDROID_HOME/build-tools/34.0.0" >> "$GITHUB_PATH"
 
       - name: Download apkeep
         uses: robinraju/release-downloader@v1.10
