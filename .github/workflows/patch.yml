@@ -9,7 +9,6 @@ jobs:
     strategy:
       matrix:
         package: [com.YoStarJP.AzurLane]
-        # package: [com.YoStarJP.AzurLane, com.YoStarEN.AzurLane]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,13 +61,15 @@ jobs:
           key: ${{ matrix.package }}-${{ steps.apk-version.outputs.VERSION }}
           path: ${{ matrix.package }}.apk
 
-      - name: Download APK
+      - name: Download APK and Extract OBB
         if: ${{ steps.cache-apk.outputs.cache-hit != 'true' }}
         env:
           PACKAGE_NAME: ${{ matrix.package }}
         run: |
           apkeep -a $PACKAGE_NAME .
           unzip -q $PACKAGE_NAME.xapk
+          mv base.apk $PACKAGE_NAME.apk
+          mkdir -p obb && find . -iname '*.obb' -exec mv {} obb/ \;
 
       - name: Patch APK
         env:
@@ -105,8 +106,10 @@ jobs:
           apksigner sign --ks keystore.jks --ks-pass env:KEYSTORE_PASSWORD  $PACKAGE_NAME.aligned.apk
           mv $PACKAGE_NAME.aligned.apk $PACKAGE_NAME.patched.apk
 
-      - name: Upload APK artifact
+      - name: Upload APK and OBB artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.package }}-${{ steps.apk-version.outputs.VERSION }}
-          path: ${{ matrix.package }}.patched.apk
+          path: |
+            ${{ matrix.package }}.patched.apk
+            obb/
